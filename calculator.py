@@ -41,17 +41,60 @@ To submit your homework:
 
 """
 
+import logging
+
+
 
 def add(*args):
     """ Returns a STRING with the sum of the arguments """
 
     # TODO: Fill sum with the correct value, based on the
     # args provided.
-    sum = "0"
+    sum = 0
+    nums = list(map(int, args))
 
-    return sum
+    for num in nums:
+        sum += num
+
+    return str(sum)
 
 # TODO: Add functions for handling more arithmetic operations.
+
+def subtract(*args):
+    nums = list(map(int, args))
+
+    # initial value is set to be the first argument
+    difference = nums[0]
+
+    for num in nums[1:]:
+        difference -= num
+
+    return str(difference)
+
+
+def multiply(*args):
+
+    nums = list(map(int, args))
+    product = 1
+
+    for num in nums:
+        product *= num
+
+    return str(product)
+
+
+def divide(*args):
+
+    nums = list(map(int, args))
+
+    # initial value is set to be the first argument
+    quotient = nums[0]
+
+    for num in nums:
+        quotient /= num
+
+    return str(quotient)
+
 
 def resolve_path(path):
     """
@@ -63,8 +106,28 @@ def resolve_path(path):
     # examples provide the correct *syntax*, but you should
     # determine the actual values of func and args using the
     # path.
-    func = add
-    args = ['25', '32']
+
+    # func = add
+    # args = ['25', '32']
+
+    funcs = {
+        'add': add,
+        'subtract': subtract,
+        "multiply": multiply,
+        "divide": divide
+    }
+
+    print(f"PATH strip : {path.strip('/')}")
+    print(f"PATH strip and split : {path.strip('/').split('/')}")
+    path = path.strip('/').split('/')
+
+    func_name = path[0]
+    args = path[1:]
+
+    try:
+        func = funcs[func_name]
+    except KeyError:
+        raise NameError
 
     return func, args
 
@@ -74,6 +137,35 @@ def application(environ, start_response):
     # invoke start_response(status, headers) and also return
     # the body of the response in BYTE encoding.
     #
+    headers = [("Content-type", "text/html")]
+    try:
+        path = environ.get('PATH_INFO', None)
+
+        #print(f"PATH: {path}")
+
+        if path is None:
+            raise NameError
+
+        if path == '/':
+            body = "add, Here's how to use this page..."
+        else:
+            func, args = resolve_path(path)
+            body = func(*args)
+        status = "200 OK"
+
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1>Internal Server Error"
+
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+        return [body.encode()]
+
     # TODO (bonus): Add error handling for a user attempting
     # to divide by zero.
     pass
@@ -81,4 +173,6 @@ def application(environ, start_response):
 if __name__ == '__main__':
     # TODO: Insert the same boilerplate wsgiref simple
     # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
